@@ -1,0 +1,13 @@
+name = "NonconvexMultistart"
+uuid = "11b12826-7e46-4acf-9706-be0a67f2add7"
+authors = ["Mohamed Tarek <mohamed82008@gmail.com> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
