@@ -14,6 +14,7 @@ Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 Sobol = "ed01d8cd-4d21-5b2a-85b4-cc3bdc58bad4"
 
 [compat]
+ChainRulesCore = "0.10, 1"
 Hyperopt = "0.4"
 NonconvexCore = "0.1.4"
 Parameters = "0.12"
