@@ -19,7 +19,7 @@ Hyperopt = "0.4"
 NonconvexCore = "0.1.4"
 Parameters = "0.12"
 Reexport = "1"
-Setfield = "0.7"
+Setfield = "0.7, 0.8"
 Sobol = "1"
 julia = "1"
 
