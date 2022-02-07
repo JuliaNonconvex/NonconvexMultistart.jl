@@ -6,9 +6,7 @@ export  HyperoptAlg,
         Hyperband,
         LHSampler,
         CLHSampler,
-        GPSampler,
-        DeflatedAlg,
-        DeflatedOptions
+        GPSampler
 
 import Hyperopt
 using Reexport, Parameters, Setfield, ChainRulesCore, Sobol
@@ -17,6 +15,5 @@ using NonconvexCore: reset!, isfeasible, @params, VecModel, AbstractOptimizer, A
 import NonconvexCore: optimize!, Workspace
 
 include("hyperopt.jl")
-include("deflation.jl")
 
 end
