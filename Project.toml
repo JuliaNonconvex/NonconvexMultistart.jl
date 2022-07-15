@@ -1,7 +1,7 @@
 name = "NonconvexMultistart"
 uuid = "11b12826-7e46-4acf-9706-be0a67f2add7"
 authors = ["Mohamed Tarek <mohamed82008@gmail.com> and contributors"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -19,7 +19,7 @@ Hyperopt = "0.4"
 NonconvexCore = "1"
 Parameters = "0.12"
 Reexport = "1"
-Setfield = "0.7"
+Setfield = "0.7, 0.8, 1"
 Sobol = "1"
 julia = "1"
 

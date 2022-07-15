@@ -119,7 +119,7 @@ function optimize!(workspace::HyperoptWorkspace)
         objective = objective, params = params,
         candidates = candidates,
     )
-    ho = @set _ho.objective = (args...) -> begin
+    ho = switch_objective(_ho, (args...) -> begin
         if length(args) == 2 && sampler isa Hyperopt.Hyperband
             if _sampler isa Hyperopt.GPSampler
                 res, _ = _ho.objective(args[1], args[2]...)
@@ -135,7 +135,7 @@ function optimize!(workspace::HyperoptWorkspace)
         else
             return res
         end
-    end
+    end)
     if _sampler isa Union{Hyperopt.LHSampler, Hyperopt.CLHSampler, Hyperopt.GPSampler}
         Hyperopt.init!(_sampler, ho)
     end
@@ -154,6 +154,19 @@ function optimize!(workspace::HyperoptWorkspace)
             return HyperoptResult(optimal.minimum, optimal.minimizer, nothing, nothing)
         end
     end
+end
+
+function switch_objective(ho, objective)
+    (; iterations, params, candidates, history, results, sampler) = ho
+    return Hyperopt.Hyperoptimizer(;
+        iterations,
+        params,
+        candidates,
+        history,
+        results,
+        sampler,
+        objective,
+    )
 end
 
 function get_linrange_candidates(lb, ub, n)
