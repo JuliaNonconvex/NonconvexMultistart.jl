@@ -16,24 +16,34 @@ end
 - `keep_all`: if true, all the solutions of the sub-problems will be saved
 """
 @params struct HyperoptOptions
-    sub_options
-    lb
-    ub
+    sub_options::Any
+    lb::Any
+    ub::Any
     searchspace_size::Integer
     iters::Integer
     sampler::Hyperopt.Sampler
-    ctol
+    ctol::Any
     keep_all::Bool
 end
 function HyperoptOptions(;
-    sub_options, lb = nothing, ub = nothing,
-    iters = 40, searchspace_size = iters,
-    sampler = RandomSampler(), ctol = 1e-5,
+    sub_options,
+    lb = nothing,
+    ub = nothing,
+    iters = 40,
+    searchspace_size = iters,
+    sampler = RandomSampler(),
+    ctol = 1e-5,
     keep_all = true,
 )
     return HyperoptOptions(
-        sub_options, lb, ub, searchspace_size,
-        iters, sampler, ctol, keep_all
+        sub_options,
+        lb,
+        ub,
+        searchspace_size,
+        iters,
+        sampler,
+        ctol,
+        keep_all,
     )
 end
 
@@ -43,13 +53,17 @@ end
     options::HyperoptOptions
 end
 
-function Workspace(model::VecModel, alg::HyperoptAlg, x0::AbstractVector; options, kwargs...)
-    sub_options = options.sub_options isa Function ? options.sub_options(1) : options.sub_options
+function Workspace(
+    model::VecModel,
+    alg::HyperoptAlg,
+    x0::AbstractVector;
+    options,
+    kwargs...,
+)
+    sub_options =
+        options.sub_options isa Function ? options.sub_options(1) : options.sub_options
     return HyperoptWorkspace(
-        Workspace(
-            model, alg.sub_alg, copy(x0);
-            options = sub_options, kwargs...,
-        ),
+        Workspace(model, alg.sub_alg, copy(x0); options = sub_options, kwargs...),
         x0,
         options,
     )
@@ -65,10 +79,10 @@ When using multiple x0 in [`optimize`](@ref), return this result, including foll
 - `optimal_ind`: the index of the optimal solution in `results`.
 """
 @params struct HyperoptResult <: AbstractResult
-    minimum
-    minimizer
-    results
-    optimal_ind
+    minimum::Any
+    minimizer::Any
+    results::Any
+    optimal_ind::Any
 end
 
 function optimize!(workspace::HyperoptWorkspace)
@@ -79,7 +93,9 @@ function optimize!(workspace::HyperoptWorkspace)
 
     lb = lb === nothing ? getmin(model) : lb
     ub = ub === nothing ? getmax(model) : ub
-    @assert all(isfinite, lb) && all(isfinite, ub) throw("Please use finite bounds for the starting point search.")
+    @assert all(isfinite, lb) && all(isfinite, ub) throw(
+        "Please use finite bounds for the starting point search.",
+    )
 
     @info "Multistart algorithm started. "
     @assert searchspace_size >= 1 "searchspace_size must be a positive integer. "
@@ -88,55 +104,63 @@ function optimize!(workspace::HyperoptWorkspace)
     _sampler = sampler isa Hyperopt.Hyperband ? sampler.inner : sampler
     if _sampler isa Hyperopt.GPSampler
         params, candidates = get_linrange_candidates(lb, ub, searchspace_size)
-        objective = (i, x0...) -> begin
-            if sampler isa Hyperopt.Hyperband
-                @assert options.sub_options isa Function
-                sub_options = options.sub_options(i)
-                _sub_workspace = @set sub_workspace.options = sub_options
-            else
-                _sub_workspace = sub_workspace
+        objective =
+            (i, x0...) -> begin
+                if sampler isa Hyperopt.Hyperband
+                    @assert options.sub_options isa Function
+                    sub_options = options.sub_options(i)
+                    _sub_workspace = @set sub_workspace.options = sub_options
+                else
+                    _sub_workspace = sub_workspace
+                end
+                _x0 = [x0...]
+                reset!(_sub_workspace, _x0)
+                return optimize!(_sub_workspace), _x0
             end
-            _x0 = [x0...]
-            reset!(_sub_workspace, _x0)
-            return optimize!(_sub_workspace), _x0
-        end
     else
         params, candidates = get_sobol_candidates(lb, ub, x0, searchspace_size)
-        objective = (i, x0) -> begin
-            if sampler isa Hyperopt.Hyperband
-                @assert options.sub_options isa Function
-                sub_options = options.sub_options(i)
-                _sub_workspace = @set sub_workspace.options = sub_options
-            else
-                _sub_workspace = sub_workspace
+        objective =
+            (i, x0) -> begin
+                if sampler isa Hyperopt.Hyperband
+                    @assert options.sub_options isa Function
+                    sub_options = options.sub_options(i)
+                    _sub_workspace = @set sub_workspace.options = sub_options
+                else
+                    _sub_workspace = sub_workspace
+                end
+                reset!(_sub_workspace, x0)
+                return optimize!(_sub_workspace), x0
             end
-            reset!(_sub_workspace, x0)
-            return optimize!(_sub_workspace), x0
-        end
     end
     _ho = Hyperopt.Hyperoptimizer(
-        iterations = iters, sampler = sampler,
-        objective = objective, params = params,
+        iterations = iters,
+        sampler = sampler,
+        objective = objective,
+        params = params,
         candidates = candidates,
     )
-    ho = switch_objective(_ho, (args...) -> begin
-        if length(args) == 2 && sampler isa Hyperopt.Hyperband
-            if _sampler isa Hyperopt.GPSampler
-                res, _ = _ho.objective(args[1], args[2]...)
+    ho = switch_objective(
+        _ho,
+        (args...) -> begin
+            if length(args) == 2 && sampler isa Hyperopt.Hyperband
+                if _sampler isa Hyperopt.GPSampler
+                    res, _ = _ho.objective(args[1], args[2]...)
+                else
+                    res, _ = _ho.objective(args[1], args[2])
+                end
             else
-                res, _ = _ho.objective(args[1], args[2])
+                res, _ = _ho.objective(args...)
             end
-        else
-            res, _ = _ho.objective(args...)
-        end
-        push!(_ho.results, res.minimum)
-        if sampler isa Hyperopt.Hyperband
-            return isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf, res.minimizer
-        else
-            return res
-        end
-    end)
-    if _sampler isa Union{Hyperopt.LHSampler, Hyperopt.CLHSampler, Hyperopt.GPSampler}
+            push!(_ho.results, res.minimum)
+            if sampler isa Hyperopt.Hyperband
+                return isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf,
+                res.minimizer
+            else
+                return res
+            end
+        end,
+    )
+    if _sampler isa Union{Hyperopt.LHSampler,Hyperopt.CLHSampler,Hyperopt.GPSampler}
         Hyperopt.init!(_sampler, ho)
     end
     if sampler isa Hyperopt.Hyperband
@@ -146,7 +170,13 @@ function optimize!(workspace::HyperoptWorkspace)
         hor = map(ho) do (args)
             ho.objective(values(args)...)
         end
-        ind = argmin(map(res -> (isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf), hor))
+        ind = argmin(
+            map(
+                res ->
+                    (isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf),
+                hor,
+            ),
+        )
         optimal = hor[ind]
         if keep_all
             return HyperoptResult(optimal.minimum, optimal.minimizer, identity.(hor), ind)
