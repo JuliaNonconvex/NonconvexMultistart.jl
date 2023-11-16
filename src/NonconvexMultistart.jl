@@ -7,7 +7,7 @@ import Hyperopt
 using Reexport, Parameters, Setfield, ChainRulesCore, Sobol
 @reexport using NonconvexCore
 using NonconvexCore:
-    reset!, isfeasible, @params, VecModel, AbstractOptimizer, AbstractResult
+    reset!, isfeasible, VecModel, AbstractOptimizer, AbstractResult
 import NonconvexCore: optimize!, Workspace
 
 include("hyperopt.jl")

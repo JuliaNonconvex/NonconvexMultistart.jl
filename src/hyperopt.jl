@@ -1,5 +1,5 @@
-@params struct HyperoptAlg <: AbstractOptimizer
-    sub_alg::AbstractOptimizer
+struct HyperoptAlg{S <: AbstractOptimizer} <: AbstractOptimizer
+    sub_alg::S
 end
 
 """
@@ -15,14 +15,14 @@ end
 - `ctol`: infeasibility tolerance for accepting a solution as feasible
 - `keep_all`: if true, all the solutions of the sub-problems will be saved
 """
-@params struct HyperoptOptions
-    sub_options::Any
-    lb::Any
-    ub::Any
-    searchspace_size::Integer
-    iters::Integer
-    sampler::Hyperopt.Sampler
-    ctol::Any
+struct HyperoptOptions{S1, L, U, S2 <: Hyperopt.Sampler, C}
+    sub_options::S1
+    lb::L
+    ub::U
+    searchspace_size::Int
+    iters::Int
+    sampler::S2
+    ctol::C
     keep_all::Bool
 end
 function HyperoptOptions(;
@@ -47,10 +47,10 @@ function HyperoptOptions(;
     )
 end
 
-@params struct HyperoptWorkspace <: Workspace
-    sub_workspace::Workspace
-    x0::AbstractVector
-    options::HyperoptOptions
+struct HyperoptWorkspace{S <: Workspace, X <: AbstractVector, O <: HyperoptOptions} <: Workspace
+    sub_workspace::S
+    x0::X
+    options::O
 end
 
 function Workspace(
@@ -78,11 +78,11 @@ When using multiple x0 in [`optimize`](@ref), return this result, including foll
 - `results`: all the search results.
 - `optimal_ind`: the index of the optimal solution in `results`.
 """
-@params struct HyperoptResult <: AbstractResult
-    minimum::Any
-    minimizer::Any
-    results::Any
-    optimal_ind::Any
+struct HyperoptResult{M1, M2, R, O} <: AbstractResult
+    minimum::M1
+    minimizer::M2
+    results::R
+    optimal_ind::O
 end
 
 function optimize!(workspace::HyperoptWorkspace)
