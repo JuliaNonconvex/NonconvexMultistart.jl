@@ -10,12 +10,11 @@ alg = HyperoptAlg(IpoptAlg())
     ("Hyperband", Hyperband(R = 100, η = 3, inner = RandomSampler())),
     ("LHSampler", LHSampler()),
     ("CLHSampler", CLHSampler()),
-    ("GPSampler", GPSampler()),
 ]
     if spl_name == "Hyperband"
         options = HyperoptOptions(
             sub_options = max_iter ->
-                IpoptOptions(first_order = true, max_iter = max_iter),
+                IpoptOptions(first_order = true, max_iter = ceil(Int, max_iter)),
             sampler = spl,
         )
     else
