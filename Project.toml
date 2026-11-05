@@ -15,7 +15,7 @@ Sobol = "ed01d8cd-4d21-5b2a-85b4-cc3bdc58bad4"
 
 [compat]
 ChainRulesCore = "1"
-Hyperopt = "0.4, 0.5"
+Hyperopt = "0.6"
 LinearAlgebra = "1"
 NonconvexCore = "1.5"
 Parameters = "0.12, 0.13"

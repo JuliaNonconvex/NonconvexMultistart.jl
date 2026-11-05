@@ -102,36 +102,19 @@ function optimize!(workspace::HyperoptWorkspace)
 
     # Generate a search space
     _sampler = sampler isa Hyperopt.Hyperband ? sampler.inner : sampler
-    if _sampler isa Hyperopt.GPSampler
-        params, candidates = get_linrange_candidates(lb, ub, searchspace_size)
-        objective =
-            (i, x0...) -> begin
-                if sampler isa Hyperopt.Hyperband
-                    @assert options.sub_options isa Function
-                    sub_options = options.sub_options(i)
-                    _sub_workspace = @set sub_workspace.options = sub_options
-                else
-                    _sub_workspace = sub_workspace
-                end
-                _x0 = [x0...]
-                reset!(_sub_workspace, _x0)
-                return optimize!(_sub_workspace), _x0
+    params, candidates = get_sobol_candidates(lb, ub, x0, searchspace_size)
+    objective =
+        (i, x0) -> begin
+            if sampler isa Hyperopt.Hyperband
+                @assert options.sub_options isa Function
+                sub_options = options.sub_options(i)
+                _sub_workspace = @set sub_workspace.options = sub_options
+            else
+                _sub_workspace = sub_workspace
             end
-    else
-        params, candidates = get_sobol_candidates(lb, ub, x0, searchspace_size)
-        objective =
-            (i, x0) -> begin
-                if sampler isa Hyperopt.Hyperband
-                    @assert options.sub_options isa Function
-                    sub_options = options.sub_options(i)
-                    _sub_workspace = @set sub_workspace.options = sub_options
-                else
-                    _sub_workspace = sub_workspace
-                end
-                reset!(_sub_workspace, x0)
-                return optimize!(_sub_workspace), x0
-            end
-    end
+            reset!(_sub_workspace, x0)
+            return optimize!(_sub_workspace), x0
+        end
     _ho = Hyperopt.Hyperoptimizer(
         iterations = iters,
         sampler = sampler,
@@ -141,13 +124,9 @@ function optimize!(workspace::HyperoptWorkspace)
     )
     ho = switch_objective(
         _ho,
-        (args...) -> begin
+        (args...; kwargs...) -> begin
             if length(args) == 2 && sampler isa Hyperopt.Hyperband
-                if _sampler isa Hyperopt.GPSampler
-                    res, _ = _ho.objective(args[1], args[2]...)
-                else
-                    res, _ = _ho.objective(args[1], args[2])
-                end
+                res, _ = _ho.objective(args[1], args[2])
             else
                 res, _ = _ho.objective(args...)
             end
@@ -160,12 +139,12 @@ function optimize!(workspace::HyperoptWorkspace)
             end
         end,
     )
-    if _sampler isa Union{Hyperopt.LHSampler,Hyperopt.CLHSampler,Hyperopt.GPSampler}
+    if _sampler isa Union{Hyperopt.LHSampler,Hyperopt.CLHSampler}
         Hyperopt.init!(_sampler, ho)
     end
     if sampler isa Hyperopt.Hyperband
         optimal = Hyperopt.hyperband(ho)
-        return HyperoptResult(optimal[1], optimal[3], nothing, nothing)
+        return HyperoptResult(optimal.loss, optimal.state, nothing, nothing)
     else
         hor = map(ho) do (args)
             ho.objective(values(args)...)
@@ -199,10 +178,6 @@ function switch_objective(ho, objective)
     )
 end
 
-function get_linrange_candidates(lb, ub, n)
-    return Tuple(Symbol.(:x0_, 1:length(lb))), Tuple(LinRange.(lb, ub, n))
-end
-
 function get_sobol_candidates(lb, ub, x0, n)
     sobol_seq_generator = SobolSeq(lb, ub)
     return (:x0,), ([[x0]; collect(next!(sobol_seq_generator) for _ = 1:n-1)],)
@@ -219,7 +194,4 @@ function LHSampler(args...; kwargs...)
 end
 function CLHSampler(dims = Hyperopt.Continuous())
     return Hyperopt.CLHSampler(dims = [dims])
-end
-function GPSampler(args...; kwargs...)
-    return Hyperopt.GPSampler(Hyperopt.Min, args...; kwargs...)
 end
