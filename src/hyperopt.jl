@@ -195,3 +195,11 @@ end
 function CLHSampler(dims = Hyperopt.Continuous())
     return Hyperopt.CLHSampler(dims = [dims])
 end
+
+function GPSampler(args...; kwargs...)
+    error(
+        "GPSampler was removed in NonconvexMultistart 0.2.0 because Hyperopt removed " *
+        "GPSampler upstream (Hyperopt >= 0.5). Use RandomSampler, LHSampler or " *
+        "CLHSampler instead.",
+    )
+end

@@ -1,7 +1,7 @@
 module NonconvexMultistart
 
 export HyperoptAlg,
-    HyperoptOptions, RandomSampler, Hyperband, LHSampler, CLHSampler
+    HyperoptOptions, RandomSampler, Hyperband, LHSampler, CLHSampler, GPSampler
 
 import Hyperopt
 using Reexport, Parameters, Setfield, ChainRulesCore, Sobol
