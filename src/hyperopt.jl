@@ -104,7 +104,7 @@ function optimize!(workspace::HyperoptWorkspace)
     _sampler = sampler isa Hyperopt.Hyperband ? sampler.inner : sampler
     params, candidates = get_sobol_candidates(lb, ub, x0, searchspace_size)
     objective =
-        (i, x0) -> begin
+        (i, x0; state = nothing) -> begin
             if sampler isa Hyperopt.Hyperband
                 @assert options.sub_options isa Function
                 sub_options = options.sub_options(i)
@@ -112,7 +112,10 @@ function optimize!(workspace::HyperoptWorkspace)
             else
                 _sub_workspace = sub_workspace
             end
-            reset!(_sub_workspace, x0)
+            # Warm-start from the previous rung's minimizer when Hyperband
+            # passes one back through `state`.
+            _x0 = state === nothing ? x0 : state
+            reset!(_sub_workspace, _x0)
             return optimize!(_sub_workspace), x0
         end
     _ho = Hyperopt.Hyperoptimizer(
@@ -126,11 +129,15 @@ function optimize!(workspace::HyperoptWorkspace)
         _ho,
         (args...; kwargs...) -> begin
             if length(args) == 2 && sampler isa Hyperopt.Hyperband
-                res, _ = _ho.objective(args[1], args[2])
+                res, _ = _ho.objective(args[1], args[2]; kwargs...)
             else
                 res, _ = _ho.objective(args...)
             end
-            push!(_ho.results, res.minimum)
+            # Hyperopt's hyperband appends the rung losses to results itself;
+            # only record evaluations for the other samplers.
+            if !(sampler isa Hyperopt.Hyperband)
+                push!(_ho.results, res.minimum)
+            end
             if sampler isa Hyperopt.Hyperband
                 return isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf,
                 res.minimizer
@@ -140,6 +147,11 @@ function optimize!(workspace::HyperoptWorkspace)
         end,
     )
     if _sampler isa Union{Hyperopt.LHSampler,Hyperopt.CLHSampler}
+        searchspace_size == iters || throw(
+            ArgumentError(
+                "LHSampler and CLHSampler require `searchspace_size == iters` (got $searchspace_size and $iters).",
+            ),
+        )
         Hyperopt.init!(_sampler, ho)
     end
     if sampler isa Hyperopt.Hyperband
@@ -149,13 +161,12 @@ function optimize!(workspace::HyperoptWorkspace)
         hor = map(ho) do (args)
             ho.objective(values(args)...)
         end
-        ind = argmin(
-            map(
-                res ->
-                    (isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf),
-                hor,
-            ),
+        mapped = map(
+            res -> (isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf),
+            hor,
         )
+        ind = argmin(mapped)
+        isfinite(mapped[ind]) || @warn "No feasible solution was found among the multistart results; returning the best result found."
         optimal = hor[ind]
         if keep_all
             return HyperoptResult(optimal.minimum, optimal.minimizer, identity.(hor), ind)
