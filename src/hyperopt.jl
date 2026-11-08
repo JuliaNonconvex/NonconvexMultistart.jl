@@ -2,6 +2,10 @@ struct HyperoptAlg{S<:AbstractOptimizer} <: AbstractOptimizer
     sub_alg::S
 end
 
+# Hyperopt is a meta-algorithm: all model features are forwarded to the
+# sub-solver.
+NonconvexCore.solver_capabilities(alg::HyperoptAlg) = solver_capabilities(alg.sub_alg)
+
 """
     HyperoptOptions: options performing starting point optimization using Hyperopt.jl
 

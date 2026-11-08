@@ -89,4 +89,6 @@ end
     optimal = Hyperopt.hyperband(ho)
     @test isfinite(optimal.loss)
     @test length(ho.results) == length(sampler.budgets)
-end
+
+@testset "solver capabilities" begin
+    @test solver_capabilities(HyperoptAlg(IpoptAlg())) == solver_capabilities(IpoptAlg())
