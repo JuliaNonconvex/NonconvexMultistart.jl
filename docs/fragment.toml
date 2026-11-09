@@ -1,0 +1,11 @@
+name = "Multistart"
+modules = ["NonconvexMultistart"]
+doctest_setup = "using NonconvexMultistart"
+
+[[pages]]
+title = "Multistart"
+file = "index.md"
+
+[[pages]]
+title = "Docstrings"
+file = "docstrings.md"
