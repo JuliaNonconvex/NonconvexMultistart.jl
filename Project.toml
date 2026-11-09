@@ -14,6 +14,8 @@ Setfield = "efcf1570-3423-57d1-acb7-fd33fddbac46"
 Sobol = "ed01d8cd-4d21-5b2a-85b4-cc3bdc58bad4"
 
 [compat]
+Aqua = "0.8"
+JET = "0.9, 0.10, 0.11, 0.12, 0.13"
 ChainRulesCore = "1"
 Hyperopt = "0.6"
 LinearAlgebra = "1"
@@ -25,8 +27,10 @@ Sobol = "1"
 julia = "1.10"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
+JET = "c3a54625-cd67-489e-a8e7-0a5a0ff4e31b"
 NonconvexIpopt = "bf347577-a06d-49ad-a669-8c0e005493b8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["NonconvexIpopt", "Test"]
+test = ["NonconvexIpopt", "Test", "Aqua", "JET"]
