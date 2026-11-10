@@ -92,3 +92,5 @@ end
 
 @testset "solver capabilities" begin
     @test solver_capabilities(HyperoptAlg(IpoptAlg())) == solver_capabilities(IpoptAlg())
+
+include("aqua.jl")
