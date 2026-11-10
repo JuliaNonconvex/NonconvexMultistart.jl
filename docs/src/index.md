@@ -36,9 +36,6 @@ The `sampler` argument can be of type:
 5. `Hyperband`
 
 When optimizing the starting point, the upper and lower bounds on the initial solution must be finite, or finite bounds must be passed in to the `options` constructor. All the options that can be passed to the `HyperoptOptions` constructor are listed below:
-```@docs
-NonconvexMultistart.HyperoptOptions
-```
 
 ### Sampler choice
 
