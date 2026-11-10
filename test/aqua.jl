@@ -1,4 +1,6 @@
-using Aqua, NonconvexMultistart
+@testitem "Aqua" begin
+    using Aqua, NonconvexMultistart
 
-# All Aqua quality gates are enabled. No tests are skipped.
-Aqua.test_all(NonconvexMultistart)
+    # All Aqua quality gates are enabled. No tests are skipped.
+    Aqua.test_all(NonconvexMultistart)
+end
