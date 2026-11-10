@@ -1,7 +1,7 @@
 name = "NonconvexMultistart"
 uuid = "11b12826-7e46-4acf-9706-be0a67f2add7"
+version = "0.3.0"
 authors = ["Mohamed Tarek <mohdibntarek@gmail.com> and contributors"]
-version = "0.2.2"
 
 [deps]
 ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
@@ -17,16 +17,22 @@ Sobol = "ed01d8cd-4d21-5b2a-85b4-cc3bdc58bad4"
 ChainRulesCore = "1"
 Hyperopt = "0.6"
 LinearAlgebra = "1"
-NonconvexCore = "1.5"
+NonconvexCore = "2"
+NonconvexIpopt = "0.8, 1"
 Parameters = "0.12, 0.13"
 Reexport = "1"
 Setfield = "1"
 Sobol = "1"
+Test = "1"
+TestItemRunner = "0.1, 0.2, 1"
+TestItems = "0.1, 1"
 julia = "1.10"
 
 [extras]
 NonconvexIpopt = "bf347577-a06d-49ad-a669-8c0e005493b8"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+TestItemRunner = "f8b46487-2199-4994-9208-9a1283c18c0a"
+TestItems = "1c621080-faea-4a02-84b6-bbd5e436b8fe"
 
 [targets]
-test = ["NonconvexIpopt", "Test"]
+test = ["NonconvexIpopt", "Test", "TestItemRunner", "TestItems"]

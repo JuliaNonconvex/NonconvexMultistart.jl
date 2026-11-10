@@ -2,6 +2,10 @@ struct HyperoptAlg{S<:AbstractOptimizer} <: AbstractOptimizer
     sub_alg::S
 end
 
+# Hyperopt is a meta-algorithm: all model features are forwarded to the
+# sub-solver.
+NonconvexCore.solver_capabilities(alg::HyperoptAlg) = solver_capabilities(alg.sub_alg)
+
 """
     HyperoptOptions: options performing starting point optimization using Hyperopt.jl
 
@@ -27,23 +31,16 @@ struct HyperoptOptions{S1,L,U,S2<:Hyperopt.Sampler,C}
 end
 function HyperoptOptions(;
     sub_options,
-    lb = nothing,
-    ub = nothing,
-    iters = 40,
-    searchspace_size = iters,
-    sampler = RandomSampler(),
-    ctol = 1e-5,
-    keep_all = true,
+    lb=nothing,
+    ub=nothing,
+    iters=40,
+    searchspace_size=iters,
+    sampler=RandomSampler(),
+    ctol=1e-5,
+    keep_all=true,
 )
     return HyperoptOptions(
-        sub_options,
-        lb,
-        ub,
-        searchspace_size,
-        iters,
-        sampler,
-        ctol,
-        keep_all,
+        sub_options, lb, ub, searchspace_size, iters, sampler, ctol, keep_all
     )
 end
 
@@ -54,18 +51,12 @@ struct HyperoptWorkspace{S<:Workspace,X<:AbstractVector,O<:HyperoptOptions} <: W
 end
 
 function Workspace(
-    model::VecModel,
-    alg::HyperoptAlg,
-    x0::AbstractVector;
-    options,
-    kwargs...,
+    model::VecModel, alg::HyperoptAlg, x0::AbstractVector; options, kwargs...
 )
     sub_options =
         options.sub_options isa Function ? options.sub_options(1) : options.sub_options
     return HyperoptWorkspace(
-        Workspace(model, alg.sub_alg, copy(x0); options = sub_options, kwargs...),
-        x0,
-        options,
+        Workspace(model, alg.sub_alg, copy(x0); options=sub_options, kwargs...), x0, options
     )
 end
 
@@ -94,7 +85,7 @@ function optimize!(workspace::HyperoptWorkspace)
     lb = lb === nothing ? getmin(model) : lb
     ub = ub === nothing ? getmax(model) : ub
     @assert all(isfinite, lb) && all(isfinite, ub) throw(
-        "Please use finite bounds for the starting point search.",
+        "Please use finite bounds for the starting point search."
     )
 
     @info "Multistart algorithm started. "
@@ -104,7 +95,7 @@ function optimize!(workspace::HyperoptWorkspace)
     _sampler = sampler isa Hyperopt.Hyperband ? sampler.inner : sampler
     params, candidates = get_sobol_candidates(lb, ub, x0, searchspace_size)
     objective =
-        (i, x0; state = nothing) -> begin
+        (i, x0; state=nothing) -> begin
             if sampler isa Hyperopt.Hyperband
                 @assert options.sub_options isa Function
                 sub_options = options.sub_options(i)
@@ -118,12 +109,12 @@ function optimize!(workspace::HyperoptWorkspace)
             reset!(_sub_workspace, _x0)
             return optimize!(_sub_workspace), x0
         end
-    _ho = Hyperopt.Hyperoptimizer(
-        iterations = iters,
-        sampler = sampler,
-        objective = objective,
-        params = params,
-        candidates = candidates,
+    _ho = Hyperopt.Hyperoptimizer(;
+        iterations=iters,
+        sampler=sampler,
+        objective=objective,
+        params=params,
+        candidates=candidates,
     )
     ho = switch_objective(
         _ho,
@@ -139,7 +130,7 @@ function optimize!(workspace::HyperoptWorkspace)
                 push!(_ho.results, res.minimum)
             end
             if sampler isa Hyperopt.Hyperband
-                return isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf,
+                return isfeasible(model, res.minimizer; ctol=ctol) ? res.minimum : Inf,
                 res.minimizer
             else
                 return res
@@ -159,14 +150,14 @@ function optimize!(workspace::HyperoptWorkspace)
         return HyperoptResult(optimal.loss, optimal.state, nothing, nothing)
     else
         hor = map(ho) do (args)
-            ho.objective(values(args)...)
+            return ho.objective(values(args)...)
         end
         mapped = map(
-            res -> (isfeasible(model, res.minimizer, ctol = ctol) ? res.minimum : Inf),
-            hor,
+            res -> (isfeasible(model, res.minimizer; ctol=ctol) ? res.minimum : Inf), hor
         )
         ind = argmin(mapped)
-        isfinite(mapped[ind]) || @warn "No feasible solution was found among the multistart results; returning the best result found."
+        isfinite(mapped[ind]) ||
+            @warn "No feasible solution was found among the multistart results; returning the best result found."
         optimal = hor[ind]
         if keep_all
             return HyperoptResult(optimal.minimum, optimal.minimizer, identity.(hor), ind)
@@ -179,19 +170,13 @@ end
 function switch_objective(ho, objective)
     (; iterations, params, candidates, history, results, sampler) = ho
     return Hyperopt.Hyperoptimizer(;
-        iterations,
-        params,
-        candidates,
-        history,
-        results,
-        sampler,
-        objective,
+        iterations, params, candidates, history, results, sampler, objective
     )
 end
 
 function get_sobol_candidates(lb, ub, x0, n)
     sobol_seq_generator = SobolSeq(lb, ub)
-    return (:x0,), ([[x0]; collect(next!(sobol_seq_generator) for _ = 1:n-1)],)
+    return (:x0,), ([[x0]; collect(next!(sobol_seq_generator) for _ in 1:(n - 1))],)
 end
 
 function RandomSampler(args...; kwargs...)
@@ -203,12 +188,12 @@ end
 function LHSampler(args...; kwargs...)
     return Hyperopt.LHSampler(args...; kwargs...)
 end
-function CLHSampler(dims = Hyperopt.Continuous())
-    return Hyperopt.CLHSampler(dims = [dims])
+function CLHSampler(dims=Hyperopt.Continuous())
+    return Hyperopt.CLHSampler(; dims=[dims])
 end
 
 function GPSampler(args...; kwargs...)
-    error(
+    return error(
         "GPSampler was removed in NonconvexMultistart 0.2.0 because Hyperopt removed " *
         "GPSampler upstream (Hyperopt >= 0.5). Use RandomSampler, LHSampler or " *
         "CLHSampler instead.",
