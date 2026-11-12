@@ -16,7 +16,7 @@ Multi-start and hyper-parameter optimization
 
 Hyperopt meta-algorithm wrapping any Nonconvex optimizer with random, LHS, CLHS, Gaussian process and Hyperband samplers.
 
-NonconvexMultistart.jl is part of the [JuliaNonconvex](https://github.com/JuliaNonconvex) ecosystem built on [NonconvexCore.jl](https://github.com/JuliaNonconvex/NonconvexCore.jl).
+NonconvexMultistart.jl is part of the [JuliaNonconvex](https://github.com/JuliaNonconvex) ecosystem built on [NonconvexCore.jl](https://github.com/JuliaNonconvex/NonconvexCore.jl) under the [Nonconvex.jl](https://github.com/JuliaNonconvex/Nonconvex.jl) umbrella.
 
 ## Quick start
 
