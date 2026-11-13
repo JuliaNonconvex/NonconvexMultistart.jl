@@ -109,3 +109,51 @@ end
     using NonconvexMultistart, NonconvexIpopt, Test
     @test solver_capabilities(HyperoptAlg(IpoptAlg())) == solver_capabilities(IpoptAlg())
 end
+
+@testitem "finite bounds assertion" begin
+    using NonconvexMultistart, NonconvexIpopt, Test
+
+    f(x::AbstractVector) = sqrt(x[2])
+    m = Model(f)
+    addvar!(m, [0.0, 0.0], [10.0, 10.0])
+
+    # Regression test: non-finite bounds used to throw a raw `String` via
+    # `@assert cond throw("...")`; they must raise an `AssertionError` instead.
+    options = HyperoptOptions(
+        sub_options=IpoptOptions(first_order=true),
+        lb=[-Inf, 0.0],
+        iters=1,
+        searchspace_size=1,
+    )
+    err = try
+        NonconvexMultistart.optimize(
+            m, HyperoptAlg(IpoptAlg()), [1.234, 2.345], options=options
+        )
+        nothing
+    catch e
+        e
+    end
+    @test err isa AssertionError
+    @test err isa AssertionError && occursin("finite bounds", err.msg)
+end
+
+@testitem "workspace copies x0" begin
+    using NonconvexMultistart, NonconvexIpopt, Test
+
+    f(x::AbstractVector) = sqrt(x[2])
+    m = Model(f)
+    addvar!(m, [0.0, 0.0], [10.0, 10.0])
+
+    # Regression test: `HyperoptWorkspace` used to store the caller's `x0`
+    # without copying, so mutating the caller's vector after construction
+    # silently changed the workspace's starting point.
+    options = HyperoptOptions(
+        sub_options=IpoptOptions(first_order=true), iters=1, searchspace_size=1
+    )
+    x0 = [1.234, 2.345]
+    vm, vx0, _ = NonconvexCore.tovecmodel(m, x0)
+    w = Workspace(vm, HyperoptAlg(IpoptAlg()), vx0; options=options)
+    vx0[1] = 999.0
+    @test w.x0 == [1.234, 2.345]
+    @test w.x0 !== vx0
+end
