@@ -56,7 +56,9 @@ function Workspace(
     sub_options =
         options.sub_options isa Function ? options.sub_options(1) : options.sub_options
     return HyperoptWorkspace(
-        Workspace(model, alg.sub_alg, copy(x0); options=sub_options, kwargs...), x0, options
+        Workspace(model, alg.sub_alg, copy(x0); options=sub_options, kwargs...),
+        copy(x0),
+        options,
     )
 end
 
@@ -84,9 +86,7 @@ function optimize!(workspace::HyperoptWorkspace)
 
     lb = lb === nothing ? getmin(model) : lb
     ub = ub === nothing ? getmax(model) : ub
-    @assert all(isfinite, lb) && all(isfinite, ub) throw(
-        "Please use finite bounds for the starting point search."
-    )
+    @assert all(isfinite, lb) && all(isfinite, ub) "Please use finite bounds for the starting point search."
 
     @info "Multistart algorithm started. "
     @assert searchspace_size >= 1 "searchspace_size must be a positive integer. "
