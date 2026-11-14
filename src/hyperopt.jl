@@ -1,3 +1,19 @@
+"""
+    HyperoptAlg(sub_alg)
+
+Multi-start meta-algorithm: repeatedly solves the problem with the sub-solver
+`sub_alg` from different starting points chosen by a
+[Hyperopt.jl](https://github.com/baggepinnen/Hyperopt.jl) sampler, and
+returns the best solution found. `sub_alg` can be any optimizer of the
+Nonconvex ecosystem. All constraint capabilities are forwarded from
+`sub_alg`; the starting-point search itself requires finite bounds (given
+explicitly through [`HyperoptOptions`](@ref) or taken from the model).
+
+```julia
+alg = HyperoptAlg(IpoptAlg())
+options = HyperoptOptions(sub_options = IpoptOptions(), iters = 20)
+```
+"""
 struct HyperoptAlg{S<:AbstractOptimizer} <: AbstractOptimizer
     sub_alg::S
 end
@@ -67,7 +83,7 @@ end
 
 When using multiple x0 in [`optimize`](@ref), return this result, including following fields: 
 - `minimum`: the optimal value among all searches.
-- `minmizer`: the optimal solutions found.
+- `minimizer`: the optimal solutions found.
 - `results`: all the search results.
 - `optimal_ind`: the index of the optimal solution in `results`.
 """
@@ -179,19 +195,52 @@ function get_sobol_candidates(lb, ub, x0, n)
     return (:x0,), ([[x0]; collect(next!(sobol_seq_generator) for _ in 1:(n - 1))],)
 end
 
+"""
+    RandomSampler(args...; kwargs...)
+
+A random sampler for the starting-point search of [`HyperoptAlg`](@ref);
+wraps `Hyperopt.RandomSampler`.
+"""
 function RandomSampler(args...; kwargs...)
     return Hyperopt.RandomSampler(args...; kwargs...)
 end
+"""
+    Hyperband(args...; kwargs...)
+
+The Hyperband sampler for the starting-point search of [`HyperoptAlg`](@ref);
+wraps `Hyperopt.Hyperband`. Requires `sub_options` to be a function of the
+bracket budget, e.g. `sub_options = i -> IpoptOptions(max_iter = i)`.
+"""
 function Hyperband(args...; kwargs...)
     return Hyperopt.Hyperband(args...; kwargs...)
 end
+"""
+    LHSampler(args...; kwargs...)
+
+A Latin-hypercube sampler for the starting-point search of
+[`HyperoptAlg`](@ref); wraps `Hyperopt.LHSampler`. Requires
+`searchspace_size == iters` in [`HyperoptOptions`](@ref).
+"""
 function LHSampler(args...; kwargs...)
     return Hyperopt.LHSampler(args...; kwargs...)
 end
+"""
+    CLHSampler(dims=Hyperopt.Continuous())
+
+A categorical Latin-hypercube sampler for the starting-point search of
+[`HyperoptAlg`](@ref); wraps `Hyperopt.CLHSampler`. Requires
+`searchspace_size == iters` in [`HyperoptOptions`](@ref).
+"""
 function CLHSampler(dims=Hyperopt.Continuous())
     return Hyperopt.CLHSampler(; dims=[dims])
 end
+"""
+    GPSampler(args...; kwargs...)
 
+Removed: Hyperopt dropped `GPSampler` upstream (Hyperopt ≥ 0.5), so this
+function now always throws an error. Use [`RandomSampler`](@ref),
+[`LHSampler`](@ref) or [`CLHSampler`](@ref) instead.
+"""
 function GPSampler(args...; kwargs...)
     return error(
         "GPSampler was removed in NonconvexMultistart 0.2.0 because Hyperopt removed " *
