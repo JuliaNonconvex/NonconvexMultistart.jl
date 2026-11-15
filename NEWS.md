@@ -1,5 +1,10 @@
 # NEWS
 
+## 0.3.3
+
+- Added docstrings for `HyperoptAlg` and the starting-point samplers (REPL help and API reference).
+
+
 ## 0.3.2
 
 - Fixed the error handling and `x0` aliasing; scheduled formatter workflow.
