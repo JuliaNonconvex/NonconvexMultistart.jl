@@ -1,5 +1,8 @@
 # NEWS
 
+## 0.3.4
+
+- The multistart banner is logged once per session (`maxlog = 1`).
 ## 0.3.3
 
 - Added docstrings for `HyperoptAlg` and the starting-point samplers (REPL help and API reference).
