@@ -1,5 +1,25 @@
 # NEWS
 
+## 0.3.2
+
+- Fixed the error handling and `x0` aliasing; scheduled formatter workflow.
+
+## 0.3.0
+
+- NonconvexCore 2 with forwarded sub-solver capability declarations;
+  DocumenterFragments docs; tests migrated to TestItems with
+  JET/Aqua/formatting quality gates; removed the duplicate `HyperoptOptions`
+  docs block.
+
+## 0.2.2
+
+- Fixed the Hyperopt bookkeeping and warm starts, with regression tests
+  for LHS validation and Hyperband bookkeeping.
+
+## 0.2.1
+
+- Added NEWS.md and a helpful error stub for the removed `GPSampler`.
+
 ## 0.2.0
 
 ### Breaking changes
