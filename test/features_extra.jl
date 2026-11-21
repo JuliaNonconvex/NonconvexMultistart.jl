@@ -6,8 +6,8 @@
 
 @testitem "sampler constructor wrappers" begin
     using NonconvexMultistart, Test
-    import Hyperopt
-    import Random
+    using Hyperopt: Hyperopt
+    using Random: Random
 
     @test RandomSampler() isa Hyperopt.RandomSampler
     @test LHSampler() isa Hyperopt.LHSampler
@@ -37,7 +37,7 @@ end
 
 @testitem "HyperoptOptions fields" begin
     using NonconvexMultistart, NonconvexIpopt, Test
-    import Hyperopt
+    using Hyperopt: Hyperopt
 
     sub = IpoptOptions(first_order=true)
     lb = [0.0, 0.0]
