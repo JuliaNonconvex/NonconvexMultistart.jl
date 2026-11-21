@@ -1,6 +1,6 @@
 @testitem "Sampler variations" begin
     using NonconvexMultistart, NonconvexIpopt, LinearAlgebra, Test
-    import Hyperopt
+    using Hyperopt: Hyperopt
 
     f(x::AbstractVector) = sqrt(x[2])
     g(x::AbstractVector, a, b) = (a * x[1] + b)^3 - x[2]
@@ -61,7 +61,7 @@ end
 
 @testitem "Hyperband results bookkeeping" begin
     using NonconvexMultistart, NonconvexIpopt, LinearAlgebra, Test
-    import Hyperopt
+    using Hyperopt: Hyperopt
 
     # Regression test: evaluations used to be double-pushed into the results
     # vector (once by the wrapper and once by Hyperopt.hyperband), violating
