@@ -1,4 +1,4 @@
-# Multi-start and hyper-parameter optimization in pure Julia
+# NonconvexMultistart
 
 ![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/NonconvexMultistart.jl/master/docs/src/assets/logo.png)
 
