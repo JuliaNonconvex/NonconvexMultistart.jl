@@ -1,4 +1,4 @@
-# Multi-start and hyper-parameter optimization in pure Julia
+# NonconvexMultistart
 
 ```@raw html
 <p align="center">

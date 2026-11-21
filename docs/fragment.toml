@@ -1,4 +1,4 @@
-name = "Multistart"
+name = "NonconvexMultistart"
 modules = ["NonconvexMultistart"]
 doctest_setup = "using NonconvexMultistart"
 
