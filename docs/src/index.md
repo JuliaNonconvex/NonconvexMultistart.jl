@@ -1,7 +1,5 @@
 # NonconvexMultistart
 
-![JuliaNonconvex logo](https://raw.githubusercontent.com/JuliaNonconvex/NonconvexMultistart.jl/master/docs/src/assets/logo.png)
-
 
 
 ## Description
