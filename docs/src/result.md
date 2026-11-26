@@ -16,3 +16,7 @@ r.minimizer
 r.results
 r.optimal_ind
 ```
+
+When the algorithm is a [`DeflatedAlg`](@ref) or a
+[`DeflationMultistartAlg`](@ref), the result is a `DeflationResult`
+instead; see [Deflation](deflation.md) for its fields.

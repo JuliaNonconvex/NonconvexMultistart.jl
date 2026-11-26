@@ -11,6 +11,10 @@ title = "Quick start"
 file = "quickstart.md"
 
 [[pages]]
+title = "Deflation"
+file = "deflation.md"
+
+[[pages]]
 title = "Options"
 file = "options.md"
 
