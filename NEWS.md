@@ -1,5 +1,21 @@
 # NEWS
 
+## 0.4.0
+
+- Added the `DeflatedAlg` meta-algorithm implementing the general deflation
+  constraint method of Tarek and Huang (2022, arXiv:2201.11926) for finding
+  multiple distinct local minimizers, together with `DeflationOptions` and
+  the `DeflationResult` result struct. Deflation sub-problems add the
+  constraint `Σⱼ max(d(x, xⱼ) - r, 0)⁻ᵖ + σ ≤ y` to the model, so any
+  sub-solver with nonlinear inequality constraint support can be used; the
+  power `p`, shift `σ`, radius `r`, weighted/custom distance measures, and
+  the `y` bound are configurable through `DeflationOptions`.
+- Added `DeflationMultistartAlg`, which combines deflation with an existing
+  multistart meta-algorithm: every deflation round runs a full multistart
+  search of the deflated sub-problem using the fixed-bound formulation
+  `Σⱼ max(d(x, xⱼ) - r, 0)⁻ᵖ + σ ≤ y_upper` (Lemma 4.2), configured through
+  `DeflationMultistartOptions`.
+
 ## 0.3.7
 
 - Allow NonconvexIpopt 0.9 (the previous compat pinned it below 0.9, forcing co-resolved environments onto the outdated 0.8.x line).

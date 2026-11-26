@@ -14,7 +14,7 @@
 
 Multi-start and hyper-parameter optimization
 
-Hyperopt meta-algorithm wrapping any Nonconvex optimizer with random, LHS, CLHS, Gaussian process and Hyperband samplers.
+Hyperopt meta-algorithm wrapping any Nonconvex optimizer with random, LHS, CLHS, Gaussian process and Hyperband samplers. Also provides deflation-based exploration of multiple distinct local minimizers ([Tarek and Huang, 2022](https://arxiv.org/abs/2201.11926)).
 
 NonconvexMultistart.jl is part of the [JuliaNonconvex](https://github.com/JuliaNonconvex) ecosystem built on [NonconvexCore.jl](https://github.com/JuliaNonconvex/NonconvexCore.jl) under the [Nonconvex.jl](https://github.com/JuliaNonconvex/Nonconvex.jl) umbrella.
 
@@ -25,6 +25,25 @@ using NonconvexMultistart
 
 alg = HyperoptAlg(IpoptAlg())
 options = HyperoptOptions(sub_options = IpoptOptions(), sampler = RandomSampler())
+result = optimize(model, alg, x0, options = options)
+```
+
+To find multiple distinct local minimizers with deflation:
+
+```julia
+alg = DeflatedAlg(IpoptAlg())
+options = DeflationOptions(sub_options = IpoptOptions(), iters = 10)
+result = optimize(model, alg, x0, options = options)
+```
+
+or combined with a multistart search:
+
+```julia
+alg = DeflationMultistartAlg(HyperoptAlg(IpoptAlg()))
+options = DeflationMultistartOptions(
+    multi_options = HyperoptOptions(sub_options = IpoptOptions(), iters = 10),
+    iters = 4,
+)
 result = optimize(model, alg, x0, options = options)
 ```
 
