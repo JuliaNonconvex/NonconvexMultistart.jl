@@ -1,5 +1,16 @@
 # NEWS
 
+## 0.4.1
+
+- The deflation constraint can be labeled through the `flags` option of
+  `DeflationOptions` and `DeflationMultistartOptions` (a `Symbol` or a
+  collection of `Symbol`s, `[:deflation]` by default), so inner optimizers
+  that select constraints by label — e.g. `AugLagAlg` with
+  `RelaxConstraintSelection(labels = [:deflation])` — can treat the
+  deflation constraint in a custom way.
+- Fixed the deflated model copy so the user's pre-existing constraints
+  (and their flags) are preserved in later deflation rounds.
+
 ## 0.4.0
 
 - Added the `DeflatedAlg` meta-algorithm implementing the general deflation
@@ -15,13 +26,6 @@
   search of the deflated sub-problem using the fixed-bound formulation
   `Σⱼ max(d(x, xⱼ) - r, 0)⁻ᵖ + σ ≤ y_upper` (Lemma 4.2), configured through
   `DeflationMultistartOptions`.
-- The deflation constraint can be labeled through the `flags` option of
-  `DeflationOptions` and `DeflationMultistartOptions` (a `Symbol` or a
-  collection of `Symbol`s, `[:deflation]` by default), so inner optimizers
-  that select constraints by label — e.g. `AugLagAlg` with
-  `RelaxConstraintSelection(labels = [:deflation])` — can treat the
-  deflation constraint in a custom way. Also fixed the deflated model copy
-  so pre-existing constraints are preserved in later deflation rounds.
 
 ## 0.3.7
 
