@@ -112,6 +112,19 @@ function NonconvexCore.solver_capabilities(alg::DeflationMultistartAlg)
 end
 
 """
+Normalizes the `flags` argument (a `Symbol`, a `String`, or a collection of
+`Symbol`s) to a `Set{Symbol}`. `nothing` yields the empty set.
+"""
+function _normalize_flags(flags)
+    flags === nothing && return Set{Symbol}()
+    flags isa Set{Symbol} && return copy(flags)
+    if flags isa Union{Symbol,AbstractString}
+        return Set{Symbol}([Symbol(flags)])
+    end
+    return Set{Symbol}(Symbol.(collect(flags)))
+end
+
+"""
 Validates the deflation hyperparameters shared by [`DeflationOptions`](@ref)
 and [`DeflationMultistartOptions`](@ref).
 """
@@ -172,6 +185,13 @@ Options for [`DeflatedAlg`](@ref). The fields are:
   `max(tol, radius + 100·(y_upper - K̃σ)⁻¹ᐟᵖ)` from every known solution in
   the configured distance; see `deflation_failed` for the exact acceptance
   criterion.
+- `flags`: a label (a `Symbol`, or a collection of `Symbol`s) attached to
+  the deflation constraint added to each sub-problem, `[:deflation]` by
+  default. Inner optimizers that select constraints by label can use it to
+  treat the deflation constraint in a custom way, e.g.
+  `RelaxConstraintSelection(labels = [:deflation])` in an augmented
+  Lagrangian or barrier method; optimizers that do not inspect flags (e.g.
+  Ipopt, MMA) simply ignore them. Pass `flags = nothing` for no label.
 - `keep_all`: if `true` (the default), all the sub-problem results are kept
   in the `results` field of the returned `DeflationResult`.
 """
@@ -186,6 +206,7 @@ struct DeflationOptions{S1,D,W} <: AbstractDeflationOptions
     y_upper::Float64
     ctol::Float64
     tol::Float64
+    flags::Set{Symbol}
     keep_all::Bool
 end
 function DeflationOptions(;
@@ -199,6 +220,7 @@ function DeflationOptions(;
     y_upper=1e8,
     ctol=1e-5,
     tol=1e-6,
+    flags=[:deflation],
     keep_all=true,
 )
     iters >= 1 || throw(ArgumentError("`iters` must be a positive integer, got $iters."))
@@ -214,6 +236,7 @@ function DeflationOptions(;
         float(y_upper),
         float(ctol),
         float(tol),
+        _normalize_flags(flags),
         keep_all,
     )
 end
@@ -244,6 +267,10 @@ Options for [`DeflationMultistartAlg`](@ref). The fields are:
   accepted only if it is farther than
   `max(tol, radius + 100·(y_upper - K̃σ)⁻¹ᐟᵖ)` from every known solution in
   the configured distance.
+- `flags`: a label (a `Symbol`, or a collection of `Symbol`s) attached to
+  the deflation constraint added to each sub-problem, `[:deflation]` by
+  default; see [`DeflationOptions`](@ref). Pass `flags = nothing` for no
+  label.
 - `keep_all`: if `true` (the default), all the sub-problem results are kept
   in the `results` field of the returned `DeflationResult`.
 """
@@ -258,6 +285,7 @@ struct DeflationMultistartOptions{M,D,W} <: AbstractDeflationOptions
     y_upper::Float64
     ctol::Float64
     tol::Float64
+    flags::Set{Symbol}
     keep_all::Bool
 end
 function DeflationMultistartOptions(;
@@ -271,6 +299,7 @@ function DeflationMultistartOptions(;
     y_upper=1e8,
     ctol=1e-5,
     tol=1e-6,
+    flags=[:deflation],
     keep_all=true,
 )
     iters >= 1 || throw(ArgumentError("`iters` must be a positive integer, got $iters."))
@@ -286,6 +315,7 @@ function DeflationMultistartOptions(;
         float(y_upper),
         float(ctol),
         float(tol),
+        _normalize_flags(flags),
         keep_all,
     )
 end
@@ -390,16 +420,14 @@ end
 """
 A copy of `model` whose box and constraint containers are freshly allocated,
 so variables and constraints can be appended without mutating the original.
-The (possibly immutable, empty-tuple) inequality constraint container is
-replaced by an extensible vector.
+The inequality constraint container is rebuilt with an abstract element
+type: `tovecmodel` stores constraint containers as tuples (empty ones are
+immutable, so constraints cannot be appended to them), and concrete-element
+vectors cannot hold the deflation constraint.
 """
 function _copy_model_for_deflation(model::VecModel)
     fs = model.ineq_constraints.fs
-    ineq = if fs isa Tuple
-        NonconvexCore.VectorOfFunctions(NonconvexCore.IneqConstraint[])
-    else
-        NonconvexCore.VectorOfFunctions(copy(fs))
-    end
+    ineq = NonconvexCore.VectorOfFunctions(NonconvexCore.IneqConstraint[fs...])
     return VecModel(
         model.objective,
         model.eq_constraints,
@@ -446,11 +474,12 @@ end
 """
 Builds the model of the next deflation sub-problem for [`DeflatedAlg`](@ref):
 the original model extended with the deflation variable `y ∈ [k·σ, y_upper]`
-and the constraint `∑ⱼ m(x; xⱼ) ≤ y` over the previously found solutions.
-Returns the model and a feasible starting point `[x0; y0]` where `y0` is the
-value of the deflation constraint at `x0` (plus a small margin), clipped to
-the bounds of `y`. When no solution has been found yet, the original model
-and `x0` are returned unchanged.
+and the constraint `∑ⱼ m(x; xⱼ) ≤ y` over the previously found solutions,
+labeled with the `flags` of `options`. Returns the model and a feasible
+starting point `[x0; y0]` where `y0` is the value of the deflation
+constraint at `x0` (plus a small margin), clipped to the bounds of `y`.
+When no solution has been found yet, the original model and `x0` are
+returned unchanged.
 """
 function deflated_model(
     model::VecModel,
@@ -466,9 +495,11 @@ function deflated_model(
     ylb = length(found) * sigma
     addvar!(dm, ylb, y_upper; init=y_upper)
     y0 = clamp(deflation_sum(x0, fs, options) + 1.0, ylb, y_upper)
-    add_ineq_constraint!(dm, function (xz)
-        return deflation_sum(xz[1:n], fs, options) - xz[end]
-    end)
+    add_ineq_constraint!(
+        dm, function (xz)
+            return deflation_sum(xz[1:n], fs, options) - xz[end]
+        end; flags=options.flags
+    )
     return dm, [x0; y0]
 end
 
@@ -476,9 +507,10 @@ end
 Builds the model of the next deflation sub-problem for
 [`DeflationMultistartAlg`](@ref): the original model extended with the
 fixed-bound deflation constraint `∑ⱼ m(x; xⱼ) ≤ y_upper` over the previously
-found solutions. No auxiliary variable is added, so the multistart sampler
-explores only the original variables. When no solution has been found yet,
-the original model and `x0` are returned unchanged.
+found solutions, labeled with the `flags` of `options`. No auxiliary
+variable is added, so the multistart sampler explores only the original
+variables. When no solution has been found yet, the original model and `x0`
+are returned unchanged.
 """
 function deflated_model(
     model::VecModel,
@@ -489,9 +521,11 @@ function deflated_model(
     prep = _prepare_deflated_model(model, found, options)
     prep === nothing && return model, copy(x0)
     fs, dm = prep
-    add_ineq_constraint!(dm, function (x)
-        return deflation_sum(x, fs, options) - options.y_upper
-    end)
+    add_ineq_constraint!(
+        dm, function (x)
+            return deflation_sum(x, fs, options) - options.y_upper
+        end; flags=options.flags
+    )
     return dm, copy(x0)
 end
 
