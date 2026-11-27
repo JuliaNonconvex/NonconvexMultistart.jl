@@ -359,3 +359,56 @@ end
         multi_options=nothing, distance=(x, xk) -> 0.0, weight=1.0
     )
 end
+
+@testitem "Deflation constraint flags" begin
+    using NonconvexMultistart, NonconvexIpopt, Test
+
+    f(x) = (x[1]^2 + x[2] - 11)^2 + (x[1] + x[2]^2 - 7)^2
+    m = Model(f)
+    addvar!(m, [-5.0, -5.0], [5.0, 5.0])
+    vm, vx0, _ = NonconvexCore.tovecmodel(m, [0.0, 0.0])
+    found = [vx0 .+ 1.0]
+
+    # Default label :deflation
+    options = DeflationOptions(sub_options=IpoptOptions(first_order=true))
+    dm, _ = NonconvexMultistart.deflated_model(vm, found, vx0, options)
+    @test length(dm.ineq_constraints.fs) == 1
+    @test dm.ineq_constraints.fs[1].flags == Set([:deflation])
+
+    # Custom labels: a collection of symbols, a single symbol, a Set, a
+    # String, and `nothing` (no label).
+    for (flags, expected) in [
+        ([:barrier, :aux], Set([:barrier, :aux])),
+        (:deflation, Set([:deflation])),
+        (Set([:deflation]), Set([:deflation])),
+        ("deflation", Set([:deflation])),
+        (nothing, Set{Symbol}()),
+    ]
+        o = DeflationOptions(sub_options=IpoptOptions(first_order=true), flags=flags)
+        d, _ = NonconvexMultistart.deflated_model(vm, found, vx0, o)
+        @test d.ineq_constraints.fs[1].flags == expected
+    end
+
+    # The fixed-bound variant labels its constraint the same way.
+    moptions = DeflationMultistartOptions(multi_options=nothing, flags=[:relax])
+    dm2, _ = NonconvexMultistart.deflated_model(vm, found, vx0, moptions)
+    @test dm2.ineq_constraints.fs[1].flags == Set([:relax])
+
+    # Pre-existing constraints keep their own labels.
+    m2 = Model(f)
+    addvar!(m2, [-5.0, -5.0], [5.0, 5.0])
+    add_ineq_constraint!(m2, x -> x[1]^2 - 1.0; flags=[:user])
+    vm2, vx02, _ = NonconvexCore.tovecmodel(m2, [0.0, 0.0])
+    dm3, _ = NonconvexMultistart.deflated_model(vm2, [vx02 .+ 1.0], vx02, options)
+    @test length(dm3.ineq_constraints.fs) == 2
+    @test dm3.ineq_constraints.fs[1].flags == Set([:user])
+    @test dm3.ineq_constraints.fs[2].flags == Set([:deflation])
+
+    # An end-to-end run with custom flags still deflates correctly.
+    o2 = DeflationOptions(
+        sub_options=IpoptOptions(first_order=true), iters=2, flags=[:relax]
+    )
+    r = NonconvexMultistart.optimize(m, DeflatedAlg(IpoptAlg()), [0.0, 0.0], options=o2)
+    @test r.converged
+    @test length(r.minimizers) == 2
+end

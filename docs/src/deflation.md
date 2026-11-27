@@ -257,6 +257,33 @@ each round. The fixed-bound formulation (Lemma 4.2 above) is used for the
 deflation constraint, so no auxiliary variable is added and the multistart
 sampler explores only the original variables.
 
+## Labeling the deflation constraints
+
+The deflation constraint added to each sub-problem carries a `flags` label
+(a `Symbol` or a collection of `Symbol`s), `[:deflation]` by default.
+Inner optimizers that select constraints by label can use it to treat the
+deflation constraint in a custom way. For example, an augmented Lagrangian
+or barrier-style inner optimizer can relax only the deflation constraint
+(or keep it hard while relaxing everything else) using the label-based
+selection of `NonconvexAugLagLab`:
+
+```julia
+alg = DeflatedAlg(AugLagAlg())
+options = DeflationOptions(
+    sub_options = AugLagOptions(
+        # relax only the deflation constraint, keep the user's constraints hard
+        relaxed = RelaxConstraintSelection(eq = false, ineq = false, labels = [:deflation]),
+    ),
+    iters = 10,
+    flags = [:deflation],
+)
+result = optimize(model, alg, x0, options = options)
+```
+
+The label is passed through the `flags` option of `DeflationOptions` and
+`DeflationMultistartOptions`; any `Symbol`s can be used, and optimizers that
+do not inspect flags (e.g. Ipopt, MMA) simply ignore them.
+
 ## Options
 
 All the options that can be passed to the `DeflationOptions` constructor:
@@ -287,6 +314,9 @@ All the options that can be passed to the `DeflationOptions` constructor:
   as feasible, `1e-5` by default.
 - `tol`: the distance tolerance used to decide that a new solution is
   identical to a previously found one, `1e-6` by default.
+- `flags`: the label attached to the deflation constraint,
+  `[:deflation]` by default; see [Labeling the deflation
+  constraints](#Labeling-the-deflation-constraints).
 - `keep_all`: when `true` (the default), all the sub-problem results are
   kept in the `results` field of the returned result; when `false`, only the
   found minimizers are returned.
